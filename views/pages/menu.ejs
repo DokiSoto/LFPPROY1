@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pensum USAC - Analizador Léxico</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css" />
+  <style>
+    body { background-color: #f0f0f0; font-family: Arial, sans-serif; margin: 0; }
+    header { background-color: #006d77; color: white; padding: 1rem; text-align: center; }
+    nav { background-color: #023047; padding: 0.5rem; display: flex; justify-content: space-around; }
+    nav a { color: white; text-decoration: none; padding: 0.5rem 1rem; }
+    nav a:hover { background-color: #219ebc; }
+    .container { display: flex; flex-wrap: wrap; padding: 1rem; gap: 1rem; }
+    .editor-section, .results-section { background-color: white; border-radius: 8px; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .editor-section { flex: 2; min-width: 300px; }
+    .results-section { flex: 3; min-width: 300px; display: flex; flex-direction: column; gap: 1rem; }
+    .CodeMirror { height: 300px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: 0.5rem; border: 1px solid #ccc; text-align: left; }
+    th { background-color: #023047; color: white; }
+    .error-row { color: #d00000; font-weight: bold; }
+    .file-options { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    button { background-color: #219ebc; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    button:hover { background-color: #0077b6; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Pensum Interactivo USAC</h1>
+    <p>Analizador Léxico - Proyecto LFP 2025</p>
+  </header>
+
+  <nav>
+    <a href="/">Inicio</a>
+    <a href="#" id="error-report-link">Reporte de Errores</a>
+    <a href="#" id="manual-tecnico-link">Manual Tecnico</a>
+    <a href="#" id="manual-usuario-link">Manual de Usuario</a>
+  </nav>
+
+  <div class="container">
+    <div class="editor-section">
+      <h2>Editor de Código (.plfp)</h2>
+      <textarea id="code-editor">Carrera: "Ingeniería en Sistemas" [
+    Semestre: 01 {
+        Curso: 101 {
+            Nombre: "Introducción a la Programación";
+            Area: 01;
+            Prerequisitos: (101);
+        }
+    }
+]</textarea>
+
+      <div class="file-options">
+        <button id="clear-editor">Limpiar</button>
+        <button id="load-file">Cargar Archivo</button>
+        <input type="file" id="file-input" accept=".plfp" style="display: none;" />
+      </div>
+      <button id="analyze-button">Analizar</button>
+    </div>
+
+    <div class="align-items-center" id="pensums"></div>
+
+    <div class="results-section">
+      <div class="tokens-container">
+        <h2>Tabla de Tokens</h2>
+        <table id="tokens-table">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Fila</th>
+              <th>Columna</th>
+              <th>Lexema</th>
+              <th>Token</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="errors-container hidden" id="error-report-container">
+        <h2>Errores Léxicos</h2>
+        <table id="errors-table">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Fila</th>
+              <th>Columna</th>
+              <th>Caracter</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+  <script>
+    const editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+      lineNumbers: true,
+      mode: 'text/x-csrc',
+      theme: 'dracula',
+      indentUnit: 4,
+      tabSize: 4,
+      lineWrapping: true
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const clearButton = document.getElementById('clear-editor');
+      const loadButton = document.getElementById('load-file');
+      const fileInput = document.getElementById('file-input');
+      const analyzeButton = document.getElementById('analyze-button');
+      const tokensTable = document.getElementById('tokens-table').getElementsByTagName('tbody')[0];
+      const errorsTable = document.getElementById('errors-table').getElementsByTagName('tbody')[0];
+      const errorReportLink = document.getElementById('error-report-link');
+      const errorReportContainer = document.getElementById('error-report-container');
+      const pensums = document.getElementById('pensums');
+
+      clearButton.addEventListener('click', () => editor.setValue(''));
+      loadButton.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => editor.setValue(e.target.result);
+          reader.readAsText(file);
+        }
+      });
+
+      errorReportLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        errorReportContainer.classList.toggle('hidden');
+      });
+
+      analyzeButton.addEventListener('click', async () => {
+        const content = editor.getValue().trim();
+        if (!content) {
+          alert('Que vas a analizar? si no hay nada');
+          return;
+        }
+
+        try {
+          const response = await fetch('/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: content
+          });
+
+          const data = await response.json();
+          pensums.innerHTML = '';
+
+          tokensTable.innerHTML = '';
+          errorsTable.innerHTML = '';
+
+          if (data.tokens?.length > 0) {
+            data.tokens.forEach((token, index) => {
+              const row = tokensTable.insertRow();
+              row.insertCell(0).textContent = index + 1;
+              row.insertCell(1).textContent = token.row;
+              row.insertCell(2).textContent = token.column;
+              row.insertCell(3).textContent = token.lexeme;
+              row.insertCell(4).textContent = token.typeTokenString || token.type;
+            });
+          } else {
+            const row = tokensTable.insertRow();
+            row.insertCell(0).textContent = 'Sin tokens encontrados';
+            row.cells[0].colSpan = 5;
+          }
+
+          if (data.errors?.length > 0) {
+            errorReportContainer.classList.remove('hidden');
+            data.errors.forEach((error, index) => {
+              const row = errorsTable.insertRow();
+              row.className = 'error-row';
+              row.insertCell(0).textContent = index + 1;
+              row.insertCell(1).textContent = error.row;
+              row.insertCell(2).textContent = error.column;
+              row.insertCell(3).textContent = error.lexeme || ' ';
+              row.insertCell(4).textContent = error.description || 'Desconocido';
+            });
+          } else {
+            errorReportContainer.classList.add('hidden');
+            alert('Analisis completado, libre de errores');
+
+            console.log(data.careers);
+            
+            data.careers.forEach(( _, index) =>{
+              pensums.innerHTML += `<a class="btn btn-success btn_user" href="${'/pensum/' + (index + 1)}" target="_blank">${'Pensum: ' + (index + 1)}</a>\n`;
+            });
+
+            data.careers.forEach((career, index) =>{
+                    localStorage.setItem(`pensum${index+1}`, JSON.stringify(career.html));
+
+            });
+
+          }
+
+        } catch (err) {
+          console.error(err);
+          alert(`ERROR ${err.message}`);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+
