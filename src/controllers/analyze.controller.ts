@@ -9,17 +9,14 @@ export const analyze = (req: Request, res: Response) => {
     const input = req.body;
     let lexicalAnalyzer: LexicalAnalyzer = new LexicalAnalyzer();
 
-    lexicalAnalyzer.scanner(input);
+    const tokenList = lexicalAnalyzer.scanner(input); 
+    const errorList = lexicalAnalyzer.getErrorList();
+    const careers: Career[] = getCareers(tokenList);
 
-    let tokenList = lexicalAnalyzer.scanner(input);
-    let errorList = lexicalAnalyzer.getErrorList();
-    let careers: Career[] = getCareers(tokenList);
-
-    
     res.json({
-        "tokens": tokenList,
-        "errors": errorList,
-        "careers": careers
+        tokens: tokenList,
+        errors: errorList,
+        careers: careers
     });
 }
 

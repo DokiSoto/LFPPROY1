@@ -175,17 +175,17 @@
           }
 
           if (data.errors?.length > 0) {
-            errorReportContainer.classList.remove('hidden');
-            data.errors.forEach((error, index) => {
-              const row = errorsTable.insertRow();
-              row.className = 'error-row';
-              row.insertCell(0).textContent = index + 1;
-              row.insertCell(1).textContent = error.row;
-              row.insertCell(2).textContent = error.column;
-              row.insertCell(3).textContent = error.lexeme || ' ';
-              row.insertCell(4).textContent = error.description || 'Desconocido';
-            });
-          } else {
+  errorReportContainer.classList.remove('hidden');
+  data.errors.forEach((error, index) => {
+    const row = errorsTable.insertRow();
+    row.className = 'error-row';
+    row.insertCell(0).textContent = index + 1;
+    row.insertCell(1).textContent = error.row;
+    row.insertCell(2).textContent = error.column;
+    row.insertCell(3).textContent = error.lexeme || ' ';
+    row.insertCell(4).textContent = error.description || 'Desconocido';
+  });
+} else {
             errorReportContainer.classList.add('hidden');
             alert('Analisis completado, libre de errores');
 

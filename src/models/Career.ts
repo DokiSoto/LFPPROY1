@@ -32,7 +32,7 @@ export class Career{
         <thead>
         <tr>
 ${this.semesters.map((item) =>{
-      return `<th Semestre NO.${item.getNum()} </th>`
+      return `<th> Semestre NO.${item.getNum()} </th>`
 }).join('\n')}
         </tr>
         </thead>
